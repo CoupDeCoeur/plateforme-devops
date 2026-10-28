@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: ghcr.io/coupdecoeur/api
+        image: api
         ports:
         - containerPort: 8080
           name: http
