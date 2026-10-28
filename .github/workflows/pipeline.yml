@@ -1,0 +1,58 @@
+name: Pipeline CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Récupération des 8 premiers caractères du SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build et push de l'image Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/api:${{ steps.vars.outputs.sha_short }}
+            ghcr.io/${{ github.repository_owner }}/api:latest
+
+      - name: Installation de Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Mise à jour du tag Kustomize
+        run: |
+          cd deploy/overlays/dev
+          kustomize edit set image api=ghcr.io/${{ github.repository_owner }}/api:${{ steps.vars.outputs.sha_short }}
+
+      - name: Configuration Git de l'auteur
+        run: |
+          git config --global user.name "pipeline-ci"
+          git config --global user.email "pipeline-ci@users.noreply.github.com"
+
+      - name: Commit et push des modifications
+        run: |
+          git add deploy/overlays/dev/kustomization.yaml
+          git commit -m "chore(ci): update dev image tag to ${{ steps.vars.outputs.sha_short }}" || exit 0
+          git push
