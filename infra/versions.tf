@@ -5,5 +5,9 @@ terraform {
       source  = "tehcyx/kind"
       version = "~> 0.11"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
   }
 }
