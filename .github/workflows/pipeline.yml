@@ -25,9 +25,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Récupération des 8 premiers caractères du SHA
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
+      - name: Récupération des variables en minuscules
+        id: lower_vars
+        run: |
+          echo "owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
 
       - name: Build et push de l'image Docker
         uses: docker/build-push-action@v5
@@ -35,8 +37,8 @@ jobs:
           context: ./app
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/api:${{ steps.vars.outputs.sha_short }}
-            ghcr.io/${{ github.repository_owner }}/api:latest
+            ghcr.io/${{ steps.lower_vars.outputs.owner }}/api:${{ steps.lower_vars.outputs.sha_short }}
+            ghcr.io/${{ steps.lower_vars.outputs.owner }}/api:latest
 
       - name: Installation de Kustomize
         uses: imranismail/setup-kustomize@v2
@@ -44,7 +46,7 @@ jobs:
       - name: Mise à jour du tag Kustomize
         run: |
           cd deploy/overlays/dev
-          kustomize edit set image api=ghcr.io/${{ github.repository_owner }}/api:${{ steps.vars.outputs.sha_short }}
+          kustomize edit set image api=ghcr.io/${{ steps.lower_vars.outputs.owner }}/api:${{ steps.lower_vars.outputs.sha_short }}
 
       - name: Configuration Git de l'auteur
         run: |
@@ -54,5 +56,5 @@ jobs:
       - name: Commit et push des modifications
         run: |
           git add deploy/overlays/dev/kustomization.yaml
-          git commit -m "chore(ci): update dev image tag to ${{ steps.vars.outputs.sha_short }}" || exit 0
+          git commit -m "chore(ci): update dev image tag to ${{ steps.lower_vars.outputs.sha_short }}" || exit 0
           git push
