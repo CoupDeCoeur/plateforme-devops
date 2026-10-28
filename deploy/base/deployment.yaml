@@ -13,18 +13,22 @@ spec:
         app: api
     spec:
       containers:
-        - name: api
-          image: api
-          ports:
-            - containerPort: 8080
-              name: http
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
+      - name: api
+        image: ghcr.io/coupdecoeur/api
+        ports:
+        - containerPort: 8080
+          name: http
+        envFrom:
+        - secretRef:
+            name: api-secret
+            optional: true
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+        resources:
+          limits:
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
